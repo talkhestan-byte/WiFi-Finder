@@ -11,6 +11,7 @@ import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -23,7 +24,6 @@ import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
@@ -70,7 +70,6 @@ public class WifiScannerPlugin extends Plugin {
                 call,
                 "locationPermsCallback"
             );
-
             return;
         }
 
@@ -86,7 +85,6 @@ public class WifiScannerPlugin extends Plugin {
             call.reject(
                 "برای اسکن شبکه‌ها باید مجوز مکان دقیق را فعال کنید."
             );
-
             return;
         }
 
@@ -208,6 +206,8 @@ public class WifiScannerPlugin extends Plugin {
 
             JSArray networks = new JSArray();
 
+            long now = SystemClock.elapsedRealtime();
+
             for (ScanResult item : results) {
 
                 JSObject network = new JSObject();
@@ -223,11 +223,7 @@ public class WifiScannerPlugin extends Plugin {
                 );
 
                 network.put("level", item.level);
-
-                network.put(
-                    "frequency",
-                    item.frequency
-                );
+                network.put("frequency", item.frequency);
 
                 network.put(
                     "channel",
@@ -235,9 +231,52 @@ public class WifiScannerPlugin extends Plugin {
                 );
 
                 network.put(
+                    "band",
+                    getBand(item.frequency)
+                );
+
+                network.put(
                     "security",
                     getSecurity(item)
                 );
+
+                network.put(
+                    "capabilities",
+                    item.capabilities == null
+                        ? ""
+                        : item.capabilities
+                );
+
+                network.put(
+                    "channelWidth",
+                    getChannelWidth(item)
+                );
+
+                network.put(
+                    "wifiStandard",
+                    getWifiStandard(item)
+                );
+
+                network.put(
+                    "centerFreq0",
+                    Build.VERSION.SDK_INT >= 23
+                        ? item.centerFreq0
+                        : 0
+                );
+
+                network.put(
+                    "centerFreq1",
+                    Build.VERSION.SDK_INT >= 23
+                        ? item.centerFreq1
+                        : 0
+                );
+
+                long age = Math.max(
+                    0,
+                    now - (item.timestamp / 1000)
+                );
+
+                network.put("lastSeenSeconds", age / 1000);
 
                 networks.put(network);
             }
@@ -290,6 +329,91 @@ public class WifiScannerPlugin extends Plugin {
         }
 
         return 0;
+    }
+
+    private String getBand(int frequency) {
+
+        if (frequency >= 2400 && frequency < 2500) {
+            return "2.4 GHz";
+        }
+
+        if (frequency >= 4900 && frequency < 5925) {
+            return "5 GHz";
+        }
+
+        if (frequency >= 5925 && frequency <= 7125) {
+            return "6 GHz";
+        }
+
+        if (frequency >= 57000 && frequency <= 71000) {
+            return "60 GHz";
+        }
+
+        return "نامشخص";
+    }
+
+    private String getChannelWidth(ScanResult item) {
+
+        if (Build.VERSION.SDK_INT < 23) {
+            return "نامشخص";
+        }
+
+        switch (item.channelWidth) {
+
+            case ScanResult.CHANNEL_WIDTH_20MHZ:
+                return "20 MHz";
+
+            case ScanResult.CHANNEL_WIDTH_40MHZ:
+                return "40 MHz";
+
+            case ScanResult.CHANNEL_WIDTH_80MHZ:
+                return "80 MHz";
+
+            case ScanResult.CHANNEL_WIDTH_160MHZ:
+                return "160 MHz";
+
+            case ScanResult.CHANNEL_WIDTH_80MHZ_PLUS_MHZ:
+                return "80+80 MHz";
+
+            default:
+                if (Build.VERSION.SDK_INT >= 31 &&
+                    item.channelWidth == ScanResult.CHANNEL_WIDTH_320MHZ) {
+                    return "320 MHz";
+                }
+
+                return "نامشخص";
+        }
+    }
+
+    private String getWifiStandard(ScanResult item) {
+
+        if (Build.VERSION.SDK_INT < 30) {
+            return "نامشخص";
+        }
+
+        switch (item.getWifiStandard()) {
+
+            case ScanResult.WIFI_STANDARD_LEGACY:
+                return "802.11a/b/g";
+
+            case ScanResult.WIFI_STANDARD_11N:
+                return "Wi-Fi 4 (802.11n)";
+
+            case ScanResult.WIFI_STANDARD_11AC:
+                return "Wi-Fi 5 (802.11ac)";
+
+            case ScanResult.WIFI_STANDARD_11AX:
+                return "Wi-Fi 6/6E (802.11ax)";
+
+            case ScanResult.WIFI_STANDARD_11AD:
+                return "802.11ad";
+
+            case ScanResult.WIFI_STANDARD_11BE:
+                return "Wi-Fi 7 (802.11be)";
+
+            default:
+                return "نامشخص";
+        }
     }
 
     private String getSecurity(ScanResult result) {
