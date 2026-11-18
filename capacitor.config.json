@@ -1,0 +1,9 @@
+
+{
+  "appId": "com.talkhestan.wififinder",
+  "appName": "WiFi Finder",
+  "webDir": ".",
+  "server": {
+    "androidScheme": "https"
+  }
+}
