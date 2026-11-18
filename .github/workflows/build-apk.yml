@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Node
@@ -29,24 +29,19 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Prepare Web Files
-        run: |
-          mkdir -p www/src
-          cp index.html www/index.html
-          cp src/style.css www/src/style.css
-          cp src/app.js www/src/app.js
+      - name: Build Web App
+        run: npm run build
 
-      - name: Add Android Platform
+      - name: Add Android
         run: npx cap add android
 
-      - name: Install Native WiFi Scanner
+      - name: Copy Native Plugin
         run: |
           mkdir -p android/app/src/main/java/com/talkhestan/wififinder
-
           cp native/android/java/com/talkhestan/wififinder/*.java \
           android/app/src/main/java/com/talkhestan/wififinder/
 
-      - name: Add Android Permissions
+      - name: Add Permissions
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -54,14 +49,21 @@ jobs:
           p = Path("android/app/src/main/AndroidManifest.xml")
           s = p.read_text()
 
-          permissions = """
-              <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
-              <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
-              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-          """
+          permissions = [
+              "ACCESS_WIFI_STATE",
+              "CHANGE_WIFI_STATE",
+              "ACCESS_FINE_LOCATION"
+          ]
 
-          if "ACCESS_WIFI_STATE" not in s:
-              s = s.replace("<application", permissions + "\n    <application", 1)
+          additions = ""
+
+          for permission in permissions:
+              full = f"android.permission.{permission}"
+              if full not in s:
+                  additions += f'    <uses-permission android:name="{full}"/>\n'
+
+          if additions:
+              s = s.replace("<application", additions + "<application", 1)
 
           p.write_text(s)
           PY
