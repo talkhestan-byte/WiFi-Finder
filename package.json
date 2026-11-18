@@ -1,0 +1,19 @@
+
+{
+  "name": "wifi-finder",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Offline Android WiFi network scanner",
+  "scripts": {
+    "build": "echo Build ready",
+    "android:add": "cap add android",
+    "android:sync": "cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.2.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.1",
+    "@capacitor/android": "^6.2.1"
+  }
+}
